@@ -1,8 +1,9 @@
-import { defineConfig } from 'astro/config';
-
-// https://astro.build/config
 import image from '@astrojs/image';
+import prefetch from '@astrojs/prefetch';
+import react from '@astrojs/react';
 import tailwind from '@astrojs/tailwind';
+import { defineConfig } from 'astro/config';
+// https://astro.build/config
 
 // https://astro.build/config
 export default defineConfig({
@@ -15,14 +16,7 @@ export default defineConfig({
     image({
       serviceEntryPoint: '@astrojs/image/sharp',
     }),
-
-    // fonts({
-    //   url: [
-    //     'https://fonts.googleapis.com/css2?family=Assistant:wght@400;700&display=swap',
-    //     'https://fonts.googleapis.com/css2?family=Caveat&display=swap',
-    //   ],
-    // }),
+    prefetch(),
+    react(),
   ],
 });
-// font-family: 'Assistant', sans-serif;
-// font-family: 'Caveat', cursive;

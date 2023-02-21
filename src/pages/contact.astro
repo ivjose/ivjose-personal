@@ -1,6 +1,8 @@
 ---
-import HeroSection from '../components/HeroSection.astro';
+import ContactForm from '../components/ContactForm';
 import Layout from '../layouts/Layouts.astro';
 ---
 
-<Layout title="Contact">Contact!<HeroSection /></Layout>
+<Layout title="Contact">
+  <ContactForm client:load />
+</Layout>

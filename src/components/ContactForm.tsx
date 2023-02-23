@@ -1,18 +1,37 @@
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
+import { useEffect, useRef } from 'react';
+import useForm from '../hooks/useForm';
+import Alert from './Alert';
+
 interface CustomElements extends HTMLFormControlsCollection {
   name: HTMLInputElement;
   email: HTMLInputElement;
   message: HTMLTextAreaElement;
 }
 
-interface CustomForm extends HTMLFormElement {
-  readonly elements: CustomElements;
-}
+const SUCCESS_MESSAGE = `Thanks for your message. I'll be in touch soon.`;
+const ERROR_MESSAGE = 'Submission failed. Try again later';
 
 const ContactForm = () => {
-  async function handleSubmit(e: React.FormEvent<CustomForm>) {
-    e.preventDefault();
+  const formRef = useRef<HTMLFormElement>(null);
+  const [data, submit, reset, error] = useForm(import.meta.env.PUBLIC_FORM_API);
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
-    const { name, email, message } = e.currentTarget.elements;
+  useEffect(() => {
+    if (data.status === 'submitted') {
+      formRef.current?.reset();
+    }
+  }, [data.status]);
+
+  async function handleSubmit(e: React.SyntheticEvent) {
+    e.preventDefault();
+    reset();
+
+    if (data.status === 'error') {
+      turnstileRef.current?.reset();
+    }
+    const { name, email, message } = e.target as typeof e.target &
+      CustomElements;
 
     const values = {
       name: name.value,
@@ -20,9 +39,17 @@ const ContactForm = () => {
       message: message.value,
     };
 
-    console.log(values, 'ASDASD');
-    alert('Form submitted');
+    const token = turnstileRef.current?.getResponse();
+
+    if (!token) {
+      return error(ERROR_MESSAGE);
+    }
+
+    await submit({
+      ...values,
+    });
   }
+
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center justify-between p-6  lg:px-8">
       <h2 className="py-10 text-4xl font-bold leading-10 tracking-widest text-slate-700 lg:text-3xl">
@@ -34,9 +61,17 @@ const ContactForm = () => {
       </p>
       <form
         method="post"
+        ref={formRef}
         onSubmit={handleSubmit}
         className=" mt-6 w-full space-y-4"
       >
+        {data.status === 'error' && (
+          <Alert status={data.status} message={ERROR_MESSAGE} />
+        )}
+        {data.status === 'submitted' && (
+          <Alert status={data.status} message={SUCCESS_MESSAGE} />
+        )}
+
         <div className="sm:col-span-2">
           <label
             htmlFor="name"
@@ -96,12 +131,22 @@ const ContactForm = () => {
             />
           </div>
         </div>
-        <div className="sm:col-span-2 sm:flex sm:justify-end">
+        <Turnstile
+          ref={turnstileRef}
+          // autoResetOnExpire={false}
+          options={{
+            size: 'invisible',
+          }}
+          siteKey={import.meta.env.PUBLIC_TURNSTILE_KEY}
+          // onExpire={() => turnstileRef.current?.reset()}
+        />
+        <div className="sm:col-span-2 ">
           <button
             type="submit"
-            className="mt-2 inline-flex w-full items-center justify-center rounded-md border border-transparent bg-slate-700 px-6 py-3 text-xl font-medium text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-700  focus:ring-offset-2 sm:w-auto"
+            disabled={data.status === 'submitting'}
+            className="inline-flex w-full items-center justify-center rounded-md border border-transparent bg-slate-700 px-6 py-3 text-xl font-medium text-white shadow-sm hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-700 focus:ring-offset-2 disabled:cursor-not-allowed  disabled:bg-slate-400 sm:w-auto"
           >
-            Submit
+            {data.status === 'submitting' ? 'Submitting' : 'Submit'}
           </button>
         </div>
       </form>

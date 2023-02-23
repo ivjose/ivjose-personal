@@ -75,7 +75,11 @@ const useSubmitForm = (url: string) => {
     dispatch({ type: 'RESET' });
   };
 
-  return [state, submitForm, reset, error] as const;
+  const submitting = () => {
+    dispatch({ type: 'SUBMITTING' });
+  };
+
+  return [state, submitForm, { reset, error, submitting }] as const;
 };
 
 export default useSubmitForm;

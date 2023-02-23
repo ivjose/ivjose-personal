@@ -1,8 +1,7 @@
-import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
+import Botpoison from '@botpoison/browser';
 import { useEffect, useRef } from 'react';
 import useForm from '../hooks/useForm';
 import Alert from './Alert';
-
 interface CustomElements extends HTMLFormControlsCollection {
   name: HTMLInputElement;
   email: HTMLInputElement;
@@ -12,10 +11,15 @@ interface CustomElements extends HTMLFormControlsCollection {
 const SUCCESS_MESSAGE = `Thanks for your message. I'll be in touch soon.`;
 const ERROR_MESSAGE = 'Submission failed. Try again later';
 
+const botpoison = new Botpoison({
+  publicKey: import.meta.env.PUBLIC_CAPTCHA_KEY,
+});
+
 const ContactForm = () => {
   const formRef = useRef<HTMLFormElement>(null);
-  const [data, submit, reset, error] = useForm(import.meta.env.PUBLIC_FORM_API);
-  const turnstileRef = useRef<TurnstileInstance>(null);
+  const [data, submit, { reset, error, submitting }] = useForm(
+    import.meta.env.PUBLIC_FORM_API
+  );
 
   useEffect(() => {
     if (data.status === 'submitted') {
@@ -26,10 +30,7 @@ const ContactForm = () => {
   async function handleSubmit(e: React.SyntheticEvent) {
     e.preventDefault();
     reset();
-
-    if (data.status === 'error') {
-      turnstileRef.current?.reset();
-    }
+    submitting();
     const { name, email, message } = e.target as typeof e.target &
       CustomElements;
 
@@ -39,15 +40,16 @@ const ContactForm = () => {
       message: message.value,
     };
 
-    const token = turnstileRef.current?.getResponse();
+    try {
+      const { solution } = await botpoison.challenge();
 
-    if (!token) {
+      await submit({
+        ...values,
+        _botpoison: solution,
+      });
+    } catch (err) {
       return error(ERROR_MESSAGE);
     }
-
-    await submit({
-      ...values,
-    });
   }
 
   return (
@@ -131,15 +133,7 @@ const ContactForm = () => {
             />
           </div>
         </div>
-        <Turnstile
-          ref={turnstileRef}
-          // autoResetOnExpire={false}
-          options={{
-            size: 'invisible',
-          }}
-          siteKey={import.meta.env.PUBLIC_TURNSTILE_KEY}
-          // onExpire={() => turnstileRef.current?.reset()}
-        />
+
         <div className="sm:col-span-2 ">
           <button
             type="submit"
